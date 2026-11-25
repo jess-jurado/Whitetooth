@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Whitetooth - Gestión Clínica Dental{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dental: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .tooth-surface { transition: all 0.15s ease-in-out; cursor: pointer; }
+        .tooth-surface:hover { filter: brightness(0.9); }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full flex overflow-hidden text-slate-800">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-white flex flex-col flex-shrink-0 border-r border-slate-800 z-30 select-none">
+        <!-- Logo -->
+        <div class="h-16 flex items-center px-6 gap-3 border-b border-slate-800/80 bg-slate-950/40">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <i data-lucide="tooth" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+                <span class="font-bold text-lg tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">Whitetooth</span>
+                <span class="block text-[10px] tracking-wider uppercase text-cyan-400 font-semibold">Gestión Dental</span>
+            </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+            <a href="/" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all {% if request.url.path == '/' %}bg-cyan-600 text-white shadow-md shadow-cyan-600/30{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/60{% endif %}">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span>Inicio / Dashboard</span>
+            </a>
+            
+            <a href="/agenda" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all {% if request.url.path.startswith('/agenda') %}bg-cyan-600 text-white shadow-md shadow-cyan-600/30{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/60{% endif %}">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+                <span>Agenda Gabinetes</span>
+            </a>
+
+            <a href="/pacientes" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all {% if request.url.path.startswith('/pacientes') %}bg-cyan-600 text-white shadow-md shadow-cyan-600/30{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/60{% endif %}">
+                <i data-lucide="users" class="w-4 h-4"></i>
+                <span>Pacientes</span>
+            </a>
+
+            <a href="/presupuestos" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all {% if request.url.path.startswith('/presupuestos') %}bg-cyan-600 text-white shadow-md shadow-cyan-600/30{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/60{% endif %}">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>Presupuestos</span>
+            </a>
+
+            <a href="/cobros" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all {% if request.url.path.startswith('/cobros') %}bg-cyan-600 text-white shadow-md shadow-cyan-600/30{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/60{% endif %}">
+                <i data-lucide="wallet" class="w-4 h-4"></i>
+                <span>Control de Cobros</span>
+            </a>
+
+            <a href="/facturas" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all {% if request.url.path.startswith('/facturas') %}bg-cyan-600 text-white shadow-md shadow-cyan-600/30{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/60{% endif %}">
+                <i data-lucide="receipt" class="w-4 h-4"></i>
+                <span>Facturas y Abonos</span>
+            </a>
+
+            <div class="pt-4 mt-4 border-t border-slate-800">
+                <a href="/respaldos" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all {% if request.url.path.startswith('/respaldos') %}bg-emerald-600 text-white shadow-md shadow-emerald-600/30{% else %}text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/60{% endif %}">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>Copias y Red LAN</span>
+                </a>
+            </div>
+        </nav>
+
+        <!-- Footer / Local Node Info -->
+        <div class="p-3.5 m-3 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400 space-y-1.5">
+            <div class="flex items-center justify-between text-slate-300">
+                <span class="font-semibold flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Red Local Activa
+                </span>
+                <span class="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-cyan-400 font-mono">SQLite WAL</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-tight">Servicio en Torre 1 accesible desde Torre 2.</p>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-100">
+        <!-- Top Navbar -->
+        <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shadow-sm z-20">
+            <!-- Search / Quick Action -->
+            <div class="flex items-center gap-4 flex-1 max-w-xl">
+                <form action="/pacientes" method="GET" class="relative w-full">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                    <input type="text" name="q" placeholder="Buscar paciente por nombre, NIF, móvil o nº expediente (Ctrl+K)..." 
+                           class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all">
+                </form>
+            </div>
+
+            <!-- Header Right Buttons -->
+            <div class="flex items-center gap-3">
+                <button onclick="document.getElementById('modal-nuevo-paciente').classList.remove('hidden')" 
+                        class="inline-flex items-center gap-2 px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all active:scale-[0.98]">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    <span>Nuevo Paciente</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="flex-1 overflow-y-auto p-6">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Modal: Nuevo Paciente Rápido -->
+    <div id="modal-nuevo-paciente" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-cyan-100 text-cyan-700 flex items-center justify-center font-bold">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-base">Alta Rápida de Paciente</h3>
+                </div>
+                <button onclick="document.getElementById('modal-nuevo-paciente').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <form action="/pacientes/nuevo" method="POST" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Nombre *</label>
+                        <input type="text" name="nombre" required placeholder="Ej. MARÍA" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Apellidos *</label>
+                        <input type="text" name="apellidos" required placeholder="Ej. GARCÍA LÓPEZ" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Teléfono Móvil (WhatsApp) *</label>
+                        <input type="tel" name="telefono_movil" required placeholder="600123456" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">DNI / NIE / NIF</label>
+                        <input type="text" name="nif_cif" placeholder="12345678Z" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Fecha de Nacimiento</label>
+                        <input type="date" name="fecha_nacimiento" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                        <input type="email" name="email" placeholder="paciente@correo.es" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tipo Paciente</label>
+                        <select name="tipo_paciente" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                            <option value="general">Privado / General</option>
+                            <option value="aseguradora">Aseguradora</option>
+                            <option value="infantil">Odontopediatría / Infantil</option>
+                            <option value="vip">Especial / VIP</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-red-600 mb-1">Alergias Conocidas</label>
+                    <input type="text" name="alergias" placeholder="Ej. Alergia a la Penicilina, Látex..." class="w-full px-3 py-2 border border-red-200 bg-red-50/30 rounded-xl text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 text-red-700">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Motivo de Consulta Inicial</label>
+                    <textarea name="motivo_consulta" rows="2" placeholder="Dolor, revisión, limpieza, presupuesto ortodoncia..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"></textarea>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                    <button type="button" onclick="document.getElementById('modal-nuevo-paciente').classList.add('hidden')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold text-white bg-cyan-600 hover:bg-cyan-700 rounded-xl shadow-sm">Guardar y Abrir Ficha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        lucide.createIcons();
+
+        // Global WhatsApp launcher helper
+        async function enviarWhatsApp(pacienteId, tipo = 'recordatorio_cita', fecha = '', hora = '', doctor = '', citaId = null) {
+            const formData = new FormData();
+            formData.append('paciente_id', pacienteId);
+            formData.append('tipo_plantilla', tipo);
+            formData.append('fecha', fecha);
+            formData.append('hora', hora);
+            formData.append('doctor', doctor);
+            if (citaId) formData.append('cita_id', citaId);
+
+            try {
+                const res = await fetch('/api/whatsapp/generar-enlace', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success && data.url) {
+                    window.open(data.url, '_blank');
+                }
+            } catch (err) {
+                alert('Error al generar enlace de WhatsApp: ' + err);
+            }
+        }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

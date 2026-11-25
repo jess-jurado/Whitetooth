@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+
+{% block title %}Facturación Oficial y Abonos - Whitetooth{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Toolbar & Legal Alert -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Facturación Oficial y Facturas de Abono</h1>
+                <p class="text-xs text-slate-400">Cumplimiento del RD 1007/2023, Ley Antifraude (Veri*factu) y exención de IVA Art. 20.Uno.3º</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="document.getElementById('modal-nueva-factura-global').classList.remove('hidden')" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                    <span>Emitir Factura Oficial</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <form action="/facturas" method="GET" class="mt-4 pt-4 border-t border-slate-100 flex flex-col md:flex-row items-center gap-3">
+            <div class="relative flex-1 w-full">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar por paciente, DNI o número de factura..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-cyan-500">
+            </div>
+
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <select name="anio" onchange="this.form.submit()" class="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 font-semibold text-slate-700">
+                    <option value="2026" {% if anio_actual == 2026 %}selected{% endif %}>Ejercicio 2026</option>
+                    <option value="2025" {% if anio_actual == 2025 %}selected{% endif %}>Ejercicio 2025</option>
+                </select>
+
+                <select name="tipo" onchange="this.form.submit()" class="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-slate-50 font-semibold text-slate-700">
+                    <option value="todas" {% if tipo == 'todas' %}selected{% endif %}>Todas las Facturas</option>
+                    <option value="ordinaria" {% if tipo == 'ordinaria' %}selected{% endif %}>Ordinarias (OFICIAL)</option>
+                    <option value="abono_rectificativa" {% if tipo == 'abono_rectificativa' %}selected{% endif %}>Abonos (Rectificativas)</option>
+                </select>
+
+                <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all">
+                    Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Financial Totals Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold uppercase text-slate-500">Facturación Bruta (Ordinarias)</span>
+            <div class="text-2xl font-bold text-slate-800 mt-1">{{ "%.2f"|format(total_base) }} €</div>
+            <span class="text-[11px] text-slate-400 block mt-0.5">Serie OFICIAL</span>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold uppercase text-rose-600">Total Rectificaciones (Abonos)</span>
+            <div class="text-2xl font-bold text-rose-600 mt-1">-{{ "%.2f"|format(total_abonos) }} €</div>
+            <span class="text-[11px] text-slate-400 block mt-0.5">Serie ABONO</span>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-emerald-200 shadow-sm bg-gradient-to-br from-emerald-500/10 to-teal-500/10">
+            <span class="text-xs font-bold uppercase text-emerald-800">Facturación Neta Fiscal</span>
+            <div class="text-2xl font-bold text-emerald-700 mt-1">{{ "%.2f"|format(total_neto) }} €</div>
+            <span class="text-[11px] text-emerald-600 font-semibold block mt-0.5">Exento de IVA (Art. 20.Uno.3º)</span>
+        </div>
+    </div>
+
+    <!-- Invoices Ledger Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                        <th class="py-3 px-4">Serie / Número</th>
+                        <th class="py-3 px-4">Fecha</th>
+                        <th class="py-3 px-4">Paciente</th>
+                        <th class="py-3 px-4">DNI / NIE</th>
+                        <th class="py-3 px-4">Tipo Factura</th>
+                        <th class="py-3 px-4 text-right">Base Imponible</th>
+                        <th class="py-3 px-4 text-right">Total Factura</th>
+                        <th class="py-3 px-4 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for f in facturas %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3.5 px-4 font-bold {% if f.tipo_factura == 'abono_rectificativa' %}text-rose-600{% else %}text-cyan-700{% endif %}">
+                            {{ f.serie }} #{{ f.numero_factura }}/{{ f.anio }}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 font-mono">{{ f.fecha_factura }}</td>
+                        <td class="py-3.5 px-4">
+                            <a href="/pacientes/{{ f.paciente_id }}" class="font-bold text-slate-800 hover:text-cyan-600">
+                                {{ f.paciente_apellidos }}, {{ f.paciente_nombre }}
+                            </a>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600 font-mono">{{ f.paciente_nif or '-' }}</td>
+                        <td class="py-3.5 px-4">
+                            {% if f.tipo_factura == 'abono_rectificativa' %}
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                                Rectificativa (Abono)
+                            </span>
+                            {% if f.rectificada_numero %}
+                            <span class="block text-[10px] text-slate-400 mt-0.5">Ref: {{ f.rectificada_serie }} #{{ f.rectificada_numero }}</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                Ordinaria (0% IVA)
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-medium text-slate-700">
+                            {{ "%.2f"|format(f.base_imponible) }} €
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-bold text-slate-800 text-sm">
+                            {{ "%.2f"|format(f.total_factura) }} €
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <a href="/facturas/{{ f.id }}/imprimir" target="_blank" class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-cyan-50 hover:text-cyan-700 font-semibold transition-all inline-flex items-center gap-1">
+                                    <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                                    <span>Ver / Imprimir</span>
+                                </a>
+
+                                {% if f.tipo_factura == 'ordinaria' %}
+                                <button onclick="abrirModalAbono({{ f.id }}, '{{ f.serie }} #{{ f.numero_factura }}/{{ f.anio }}', '{{ f.paciente_apellidos }}, {{ f.paciente_nombre }}', {{ f.total_factura }})" 
+                                        class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold transition-all inline-flex items-center gap-1" title="Emitir Factura de Abono">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                                    <span>Abono</span>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="py-12 text-center text-slate-400">No se encontraron facturas con los filtros indicados.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL: EMITIR FACTURA OFICIAL GLOBAL -->
+<div id="modal-nueva-factura-global" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 text-base">Emitir Factura Oficial</h3>
+            <button onclick="document.getElementById('modal-nueva-factura-global').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form action="/facturas/nueva" method="POST" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Paciente *</label>
+                <select name="paciente_id" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white font-semibold">
+                    <option value="">-- Seleccionar Paciente --</option>
+                    {% for p in pacientes %}
+                    <option value="{{ p.id }}">[Exp. {{ p.numero_expediente }}] {{ p.apellidos }}, {{ p.nombre }} ({{ p.nif_cif or 'Sin DNI' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Concepto Facturado *</label>
+                <input type="text" name="concepto" value="Tratamiento Odontológico Integral" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Importe Total (€) *</label>
+                    <input type="number" step="0.01" name="importe" required value="100.00" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Forma de Pago</label>
+                    <select name="forma_cobro" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white font-semibold">
+                        <option value="Tarjeta">Tarjeta</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Bizum">Bizum</option>
+                        <option value="Transferencia">Transferencia</option>
+                    </select>
+                </div>
+            </div>
+
+            <p class="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                La factura se generará con numeración correlativa inalterable cumpliendo la normativa española. Exenta de IVA (Art. 20.Uno.3º Ley 37/1992).
+            </p>
+
+            <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-nueva-factura-global').classList.add('hidden')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 rounded-xl shadow-sm">Generar Factura</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: GENERAR FACTURA DE ABONO (RECTIFICATIVA) -->
+<div id="modal-generar-abono" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+        <div class="px-6 py-4 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i data-lucide="rotate-ccw" class="w-5 h-5 text-rose-600"></i>
+                <h3 class="font-bold text-rose-900 text-base">Emitir Factura de Abono (Rectificativa)</h3>
+            </div>
+            <button onclick="document.getElementById('modal-generar-abono').classList.add('hidden')" class="text-rose-400 hover:text-rose-600 p-1 rounded-lg">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form id="form-generar-abono" method="POST" class="p-6 space-y-4">
+            <div class="bg-rose-50/50 border border-rose-200 rounded-xl p-3 text-xs text-rose-900 space-y-1">
+                <div>Factura a rectificar: <strong id="abono-factura-str"></strong></div>
+                <div>Paciente: <strong id="abono-paciente-str"></strong></div>
+                <div>Importe a rectificar: <strong id="abono-importe-str"></strong></div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Motivo de la Rectificación *</label>
+                <select name="motivo" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white font-semibold">
+                    <option value="Error de cálculo o facturación en el tratamiento">Error de cálculo o facturación en el tratamiento</option>
+                    <option value="Devolución por no realización de tratamiento">Devolución por no realización de tratamiento</option>
+                    <option value="Datos fiscales incorrectos del destinatario">Datos fiscales incorrectos del destinatario</option>
+                    <option value="Anulación por duplicidad de registro">Anulación por duplicidad de registro</option>
+                </select>
+            </div>
+
+            <p class="text-[11px] text-slate-500">
+                Se emitirá una factura en serie <strong>ABONO</strong> con signo negativo, cumpliendo la Ley Antifraude y el Reglamento de Facturación. La factura original quedará formalmente rectificada.
+            </p>
+
+            <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-generar-abono').classList.add('hidden')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm">Emitir Factura de Abono</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function abrirModalAbono(facturaId, facturaStr, pacienteStr, importe) {
+        document.getElementById('form-generar-abono').action = `/facturas/${facturaId}/abono`;
+        document.getElementById('abono-factura-str').textContent = facturaStr;
+        document.getElementById('abono-paciente-str').textContent = pacienteStr;
+        document.getElementById('abono-importe-str').textContent = importe.toFixed(2) + ' €';
+        document.getElementById('modal-generar-abono').classList.remove('hidden');
+    }
+</script>
+{% endblock %}

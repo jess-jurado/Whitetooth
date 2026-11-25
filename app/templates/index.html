@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Whitetooth{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Banner & Quick Date -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-cyan-950 rounded-3xl p-6 text-white shadow-xl flex items-center justify-between border border-slate-700/50">
+        <div class="space-y-1">
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Clínica Activa</span>
+                <span class="text-xs text-slate-400">Torre 1 (Servidor Principal)</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-white">{{ clinica.nombre_comercial }}</h1>
+            <p class="text-sm text-slate-300">Resumen operativo del día. Todo preparado para la jornada de consultas.</p>
+        </div>
+        <div class="text-right">
+            <span class="text-xs text-slate-400 block uppercase tracking-wider font-semibold">Fecha de hoy</span>
+            <span class="text-xl font-bold font-mono text-cyan-400">{{ today_str }}</span>
+        </div>
+    </div>
+
+    <!-- Metric Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <!-- Citas Hoy -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Citas Hoy</p>
+                <h3 class="text-2xl font-bold text-slate-900 mt-1">{{ total_citas_hoy }}</h3>
+                <span class="text-xs text-blue-600 font-medium">En todos los despachos</span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <i data-lucide="calendar" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <!-- Sala de Espera -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">En Sala de Espera</p>
+                <h3 class="text-2xl font-bold text-amber-600 mt-1">{{ en_espera_count }}</h3>
+                <span class="text-xs text-slate-500">{{ en_consulta_count }} en consulta ahora</span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="users" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <!-- Cobros de Hoy -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Caja Hoy</p>
+                <h3 class="text-2xl font-bold text-emerald-600 mt-1">{{ total_cobrado_hoy }} €</h3>
+                <div class="flex gap-2 text-[11px] text-slate-500 mt-0.5">
+                    <span>Ef: {{ cobros_desglose.get('Efectivo', 0) }}€</span>
+                    <span>Tarj: {{ cobros_desglose.get('Tarjeta', 0) }}€</span>
+                </div>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="wallet" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <!-- Presupuestos Pendientes -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Presupuestos Pend.</p>
+                <h3 class="text-2xl font-bold text-purple-600 mt-1">{{ total_presupuestos_pend }} €</h3>
+                <span class="text-xs text-purple-500 font-medium">{{ num_presupuestos_pend }} presupuestos activos</span>
+            </div>
+            <div class="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                <i data-lucide="file-text" class="w-6 h-6"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Section: Citas de Hoy y Accesos -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Listado de Citas de Hoy -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4 text-cyan-600"></i>
+                    <h3 class="font-bold text-slate-800 text-sm">Citas Programadas para Hoy</h3>
+                </div>
+                <a href="/agenda" class="text-xs font-semibold text-cyan-600 hover:text-cyan-700 flex items-center gap-1">
+                    Abrir Agenda Completa <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                </a>
+            </div>
+
+            <div class="divide-y divide-slate-100 flex-1 overflow-y-auto max-h-[460px]">
+                {% if citas_hoy %}
+                    {% for c in citas_hoy %}
+                    <div class="p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-4">
+                        <div class="flex items-center gap-3.5">
+                            <!-- Hora badge -->
+                            <div class="w-16 text-center py-1.5 px-2 bg-slate-100 rounded-xl border border-slate-200/60 font-mono text-xs font-bold text-slate-700">
+                                {{ c.fecha_hora_inicio[11:16] }}
+                            </div>
+
+                            <div>
+                                <a href="/pacientes/{{ c.paciente_id }}" class="font-bold text-sm text-slate-800 hover:text-cyan-600 transition-colors">
+                                    {{ c.paciente_nombre }} {{ c.paciente_apellidos }}
+                                </a>
+                                <div class="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                                    <span class="inline-flex items-center gap-1 font-medium text-slate-600">
+                                        <span class="w-2 h-2 rounded-full" style="background-color: {{ c.gabinete_color }};"></span>
+                                        {{ c.gabinete_nombre }}
+                                    </span>
+                                    <span>•</span>
+                                    <span>{{ c.motivo }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Estado y Acciones Rápidas -->
+                        <div class="flex items-center gap-2">
+                            <!-- Estado Badge -->
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold 
+                                {% if c.estado == 'programada' %}bg-slate-100 text-slate-700
+                                {% elif c.estado == 'confirmada' %}bg-blue-100 text-blue-700
+                                {% elif c.estado == 'en_espera' %}bg-amber-100 text-amber-700 animate-pulse
+                                {% elif c.estado == 'en_consulta' %}bg-cyan-100 text-cyan-700
+                                {% elif c.estado == 'realizada' %}bg-emerald-100 text-emerald-700
+                                {% elif c.estado == 'cancelada' %}bg-red-100 text-red-700
+                                {% endif %}">
+                                {{ c.estado|replace('_', ' ')|capitalize }}
+                            </span>
+
+                            <!-- WhatsApp button -->
+                            <button onclick="enviarWhatsApp({{ c.paciente_id }}, 'recordatorio_cita', '{{ today_str }}', '{{ c.fecha_hora_inicio[11:16] }}', '{{ c.doctor_nombre }}', {{ c.id }})" 
+                                    title="Enviar WhatsApp de confirmación"
+                                    class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors">
+                                <i data-lucide="message-circle" class="w-4 h-4"></i>
+                            </button>
+
+                            <!-- Odontograma / Ficha button -->
+                            <a href="/pacientes/{{ c.paciente_id }}#odontograma" title="Abrir Odontograma" class="p-2 text-cyan-600 hover:bg-cyan-50 rounded-xl transition-colors">
+                                <i data-lucide="tooth" class="w-4 h-4"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-10 text-center text-slate-400">
+                        <i data-lucide="calendar-check" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                        <p class="text-sm font-medium">No hay citas programadas para hoy.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Columna Lateral: Accesos Directos y Seguridad -->
+        <div class="space-y-5">
+            <!-- Acciones Rápidas -->
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+                <h3 class="font-bold text-slate-800 text-sm">Operaciones Rápidas</h3>
+                
+                <div class="grid grid-cols-1 gap-2.5">
+                    <a href="/agenda" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-cyan-500 hover:bg-cyan-50/50 transition-all text-sm font-semibold text-slate-700">
+                        <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                        </div>
+                        <span>Ver Agenda por Gabinetes</span>
+                    </a>
+
+                    <a href="/cobros" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-cyan-500 hover:bg-cyan-50/50 transition-all text-sm font-semibold text-slate-700">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                            <i data-lucide="wallet" class="w-4 h-4"></i>
+                        </div>
+                        <span>Arqueo de Caja y Cobros</span>
+                    </a>
+
+                    <a href="/presupuestos" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-cyan-500 hover:bg-cyan-50/50 transition-all text-sm font-semibold text-slate-700">
+                        <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center">
+                            <i data-lucide="file-plus" class="w-4 h-4"></i>
+                        </div>
+                        <span>Crear Nuevo Presupuesto</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Caja Estado de Respaldos -->
+            <div class="bg-gradient-to-br from-emerald-950 to-slate-900 rounded-2xl p-5 text-white border border-emerald-800/40 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        Seguridad y Copias
+                    </span>
+                    <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-semibold">Automático 21:00</span>
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    Las copias en caliente se realizan diariamente sin cortes de servicio. Se sincronizan en Torre 2 mediante red local.
+                </p>
+                <div class="pt-2 flex justify-between items-center text-xs border-t border-slate-800">
+                    <a href="/respaldos" class="font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                        Gestionar Copias <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </a>
+                    <form action="/respaldos/ejecutar-manual" method="POST" onsubmit="ejecutarRespaldo(event)">
+                        <button type="submit" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-semibold transition-all">
+                            Copia Inmediata
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function ejecutarRespaldo(e) {
+        e.preventDefault();
+        try {
+            const res = await fetch('/respaldos/ejecutar-manual', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                alert('✓ ' + data.mensaje + ' (' + data.tamano_mb + ' MB)');
+            } else {
+                alert('Error en copia: ' + data.error);
+            }
+        } catch (err) {
+            alert('Error al solicitar copia de seguridad: ' + err);
+        }
+    }
+</script>
+{% endblock %}

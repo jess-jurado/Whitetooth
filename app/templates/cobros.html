@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}Control de Cobros y Arqueo de Caja - Whitetooth{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Toolbar & Summary -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-800">Control de Cobros y Caja</h1>
+                <p class="text-xs text-slate-400">Arqueo diario, conciliación de pagos y desglose por método</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button onclick="document.getElementById('modal-nuevo-cobro-general').classList.remove('hidden')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2">
+                    <i data-lucide="wallet" class="w-4 h-4"></i>
+                    <span>Nuevo Cobro</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <form action="/cobros" method="GET" class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 mb-1">Fecha Desde</label>
+                <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50 font-semibold">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 mb-1">Fecha Hasta</label>
+                <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50 font-semibold">
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 mb-1">Forma de Pago</label>
+                <select name="forma_pago" class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50 font-semibold">
+                    <option value="todas" {% if forma_pago == 'todas' %}selected{% endif %}>Todas las Formas</option>
+                    <option value="Efectivo" {% if forma_pago == 'Efectivo' %}selected{% endif %}>Efectivo</option>
+                    <option value="Tarjeta" {% if forma_pago == 'Tarjeta' %}selected{% endif %}>Tarjeta (TPV)</option>
+                    <option value="Bizum" {% if forma_pago == 'Bizum' %}selected{% endif %}>Bizum</option>
+                    <option value="Transferencia" {% if forma_pago == 'Transferencia' %}selected{% endif %}>Transferencia</option>
+                    <option value="Financiado" {% if forma_pago == 'Financiado' %}selected{% endif %}>Financiado</option>
+                </select>
+            </div>
+            <div class="flex items-end gap-2">
+                <input type="text" name="q" value="{{ q }}" placeholder="Buscar por paciente o concepto..." class="w-full px-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-slate-50">
+                <button type="submit" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all">
+                    Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Arqueo de Caja Breakdown Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm col-span-2 md:col-span-1 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-emerald-200">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Total Recaudado</span>
+            <div class="text-2xl font-bold text-emerald-700 mt-1">{{ "%.2f"|format(total_general) }} €</div>
+            <span class="text-[11px] text-emerald-600 font-semibold block mt-1">{{ cobros|length }} cobros registrados</span>
+        </div>
+
+        {% for t in totales_forma %}
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">{{ t.forma_cobro }}</span>
+            <div class="text-xl font-bold text-slate-800 mt-1">{{ "%.2f"|format(t.total) }} €</div>
+            <span class="text-[10px] text-slate-400 font-medium block mt-0.5">
+                {% if total_general > 0 %}
+                {{ "%.1f"|format((t.total / total_general) * 100) }}% del total
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+
+    </div>
+
+    <!-- Collections Ledger Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 text-base">Libro Diario de Cobros</h3>
+            <span class="text-xs text-slate-400 font-medium">Periodo: {{ fecha_desde }} al {{ fecha_hasta }}</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                        <th class="py-3 px-4">Fecha</th>
+                        <th class="py-3 px-4">Paciente</th>
+                        <th class="py-3 px-4">Concepto</th>
+                        <th class="py-3 px-4">Forma de Cobro</th>
+                        <th class="py-3 px-4">Factura Oficial</th>
+                        <th class="py-3 px-4 text-right">Importe</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for c in cobros %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3.5 px-4 text-slate-500 font-mono">{{ c.fecha_cobro }}</td>
+                        <td class="py-3.5 px-4">
+                            <a href="/pacientes/{{ c.paciente_id }}" class="font-bold text-slate-800 hover:text-cyan-600">
+                                {{ c.paciente_apellidos }}, {{ c.paciente_nombre }}
+                            </a>
+                            <span class="block text-[11px] text-slate-400">Exp. #{{ c.numero_expediente }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 font-medium text-slate-700">{{ c.concepto }}</td>
+                        <td class="py-3.5 px-4">
+                            <span class="px-2.5 py-1 rounded-xl text-xs font-semibold
+                                {% if c.forma_cobro == 'Efectivo' %}bg-amber-100 text-amber-800
+                                {% elif c.forma_cobro == 'Tarjeta' %}bg-blue-100 text-blue-800
+                                {% elif c.forma_cobro == 'Bizum' %}bg-emerald-100 text-emerald-800
+                                {% else %}bg-slate-100 text-slate-800{% endif %}">
+                                {{ c.forma_cobro }}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            {% if c.numero_factura %}
+                            <a href="/facturas/{{ c.factura_id }}/imprimir" target="_blank" class="font-bold text-cyan-600 hover:underline">
+                                {{ c.factura_serie }} #{{ c.numero_factura }}
+                            </a>
+                            {% else %}
+                            <span class="text-slate-400 font-normal">Sin Factura</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right font-bold text-slate-800 text-sm">
+                            {{ "%.2f"|format(c.importe) }} €
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="py-12 text-center text-slate-400">No hay cobros registrados en el rango de fechas seleccionado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL: REGISTRAR COBRO GENERAL -->
+<div id="modal-nuevo-cobro-general" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-150">
+        <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 text-base">Registrar Entrada de Cobro</h3>
+            <button onclick="document.getElementById('modal-nuevo-cobro-general').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form action="/cobros/nuevo" method="POST" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Paciente *</label>
+                <select name="paciente_id" required class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white font-semibold">
+                    <option value="">-- Seleccionar Paciente --</option>
+                    {% for p in pacientes %}
+                    <option value="{{ p.id }}">[Exp. {{ p.numero_expediente }}] {{ p.apellidos }}, {{ p.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Importe (€) *</label>
+                    <input type="number" step="0.01" id="gen-cobro-importe" name="importe" required value="50.00" oninput="calcularCambioGen()" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-bold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Forma de Pago *</label>
+                    <select id="gen-cobro-forma" name="forma_cobro" onchange="verificarFormaGen()" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white font-semibold">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Tarjeta">Tarjeta (TPV)</option>
+                        <option value="Bizum">Bizum</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Financiado">Financiación</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Change calculator for cash -->
+            <div id="gen-calculadora-cambio" class="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 space-y-2">
+                <div class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                    <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+                    <span>Calculadora de Cambio (Efectivo)</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">Dinero Entregado (€)</label>
+                        <input type="number" step="0.01" id="gen-cobro-entregado" name="importe_entregado" placeholder="0.00" oninput="calcularCambioGen()" class="w-full px-3 py-1.5 border border-amber-300 rounded-lg text-xs bg-white font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-0.5">Cambio a Devolver</label>
+                        <div id="gen-cambio-display" class="px-3 py-1.5 bg-amber-100/80 border border-amber-300 rounded-lg text-xs font-bold text-amber-900">
+                            0.00 €
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                    <input type="date" name="fecha_cobro" value="{{ fecha_hasta }}" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Concepto</label>
+                    <input type="text" name="concepto" value="A CUENTA" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs">
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+                <input type="checkbox" id="gen-check-factura" name="generar_factura_directa" value="true" class="rounded text-cyan-600 focus:ring-cyan-500 w-4 h-4">
+                <label for="gen-check-factura" class="text-xs font-semibold text-slate-700 cursor-pointer">
+                    Emitir Factura Oficial con este cobro (0% IVA)
+                </label>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('modal-nuevo-cobro-general').classList.add('hidden')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
+                <button type="submit" class="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm">Registrar Cobro</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function verificarFormaGen() {
+        const forma = document.getElementById('gen-cobro-forma').value;
+        const box = document.getElementById('gen-calculadora-cambio');
+        if (forma === 'Efectivo') box.classList.remove('hidden');
+        else box.classList.add('hidden');
+    }
+
+    function calcularCambioGen() {
+        const imp = parseFloat(document.getElementById('gen-cobro-importe').value) || 0;
+        const ent = parseFloat(document.getElementById('gen-cobro-entregado').value) || 0;
+        const display = document.getElementById('gen-cambio-display');
+
+        if (ent >= imp) {
+            display.textContent = (ent - imp).toFixed(2) + ' €';
+            display.className = 'px-3 py-1.5 bg-emerald-100 border border-emerald-300 rounded-lg text-xs font-bold text-emerald-800';
+        } else {
+            display.textContent = 'Faltan ' + (imp - ent).toFixed(2) + ' €';
+            display.className = 'px-3 py-1.5 bg-rose-100 border border-rose-300 rounded-lg text-xs font-bold text-rose-800';
+        }
+    }
+</script>
+{% endblock %}

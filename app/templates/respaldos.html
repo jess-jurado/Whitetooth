@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Copias de Seguridad y Red Local LAN - Whitetooth{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Header -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <h1 class="text-xl font-bold text-slate-800">Copias de Seguridad y Red Local (LAN)</h1>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">Respaldos atómicos SQLite en caliente (VACUUM INTO), sincronización con Torre 2 y coste 0 €/año</p>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="btn-backup-manual" onclick="ejecutarRespaldoManual()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center gap-2">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>Hacer Copia de Seguridad Ahora</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status & Configuration Overview Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- Active DB Status -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase text-slate-500">Base de Datos Activa</span>
+                <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Modo WAL</span>
+            </div>
+            <div class="text-2xl font-bold text-slate-800">{{ db_size_mb }} MB</div>
+            <p class="text-[11px] text-slate-500">
+                Almacenada localmente en Torre 1. Soporta lecturas concurrentes ilimitadas desde Torre 2 y tablets.
+            </p>
+        </div>
+
+        <!-- Automated LAN Schedule -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase text-slate-500">Programación Automática</span>
+                <span class="text-[10px] bg-cyan-100 text-cyan-800 font-bold px-2 py-0.5 rounded-full">Diaria</span>
+            </div>
+            <div class="text-2xl font-bold text-cyan-700">{{ backup_time }} hrs</div>
+            <p class="text-[11px] text-slate-500">
+                Daemon en segundo plano. Realiza snapshot atómico sin interrumpir el trabajo de los gabinetes.
+            </p>
+        </div>
+
+        <!-- LAN Sync Target (Torre 2) -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase text-slate-500">Sincronización Torre 2</span>
+                <span class="text-[10px] bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-full">Red Local</span>
+            </div>
+            <div class="text-xs font-mono font-bold text-slate-700 truncate" title="{{ lan_backup_path }}">
+                {{ lan_backup_path }}
+            </div>
+            <p class="text-[11px] text-slate-500">
+                Copia duplicada en la segunda máquina de la clínica para contingencias en caso de avería de hardware.
+            </p>
+        </div>
+
+    </div>
+
+    <!-- Architecture & Clinic Workflow Explainer -->
+    <div class="bg-gradient-to-r from-slate-900 to-cyan-950 rounded-2xl p-6 text-white shadow-md">
+        <h3 class="text-base font-bold text-cyan-300 flex items-center gap-2 mb-2">
+            <i data-lucide="network" class="w-5 h-5 text-cyan-400"></i>
+            <span>¿Cómo funciona la conexión entre la Torre 1 y la Torre 2 de la clínica?</span>
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-300 mt-4 leading-relaxed">
+            <div class="space-y-2 bg-white/5 p-4 rounded-xl border border-white/10">
+                <strong class="text-white block text-sm">1. Torre 1 (Recepción / Servidor Principal)</strong>
+                <p>
+                    Es la máquina donde se ejecuta el programa Whitetooth. Aloja la base de datos SQLite con journaling WAL y atiende las peticiones de ambas torres. No requiere internet para funcionar ni cuotas mensuales.
+                </p>
+            </div>
+            <div class="space-y-2 bg-white/5 p-4 rounded-xl border border-white/10">
+                <strong class="text-white block text-sm">2. Torre 2 (Gabinete Médico) y Tablets</strong>
+                <p>
+                    No necesitan instalar nada. Solo abren el navegador (Chrome, Edge, Safari) e ingresan la IP local (ej. <code class="bg-white/10 px-1 py-0.5 rounded text-cyan-300 font-mono">http://192.168.1.XX:8000</code>). Tienen acceso instantáneo a la agenda, odontograma y fichas médicas en tiempo real.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Existing Backups List -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 text-base">Copias Disponibles para Descarga y Restauración</h3>
+            <span class="text-xs text-slate-400 font-medium">Total: {{ copias|length }} copias</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                        <th class="py-3 px-4">Archivo de Respaldo</th>
+                        <th class="py-3 px-4">Fecha y Hora</th>
+                        <th class="py-3 px-4 text-right">Tamaño</th>
+                        <th class="py-3 px-4 text-center">Descargar</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for c in copias %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3.5 px-4 font-mono font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="database" class="w-4 h-4 text-cyan-600"></i>
+                            <span>{{ c.nombre }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500">{{ c.fecha }}</td>
+                        <td class="py-3.5 px-4 text-right font-bold text-slate-700">{{ c.tamano_mb }} MB</td>
+                        <td class="py-3.5 px-4 text-center">
+                            <a href="/respaldos/descargar/{{ c.nombre }}" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-cyan-50 hover:text-cyan-700 font-semibold transition-all inline-flex items-center gap-1.5">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                <span>Descargar</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="py-8 text-center text-slate-400">No hay copias de seguridad archivadas todavía.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Execution Logs -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100">
+            <h3 class="font-bold text-slate-800 text-base">Registro de Auditoría de Respaldos</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                        <th class="py-3 px-4">Fecha / Hora</th>
+                        <th class="py-3 px-4">Tipo</th>
+                        <th class="py-3 px-4">Nombre Archivo</th>
+                        <th class="py-3 px-4 text-center">Local</th>
+                        <th class="py-3 px-4 text-center">LAN Torre 2</th>
+                        <th class="py-3 px-4 text-center">Resultado</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-xs">
+                    {% for l in logs %}
+                    <tr class="hover:bg-slate-50/80 transition-colors">
+                        <td class="py-3 px-4 text-slate-500 font-mono">{{ l.fecha_hora[:19] }}</td>
+                        <td class="py-3 px-4 font-semibold text-slate-700 capitalize">{{ l.tipo }}</td>
+                        <td class="py-3 px-4 font-mono text-slate-800">{{ l.nombre_archivo }}</td>
+                        <td class="py-3 px-4 text-center">
+                            <span class="inline-flex items-center gap-1 text-emerald-600 font-bold">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i> OK
+                            </span>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            {% if l.destino_lan_sincronizado %}
+                            <span class="inline-flex items-center gap-1 text-emerald-600 font-bold">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i> Sincronizado
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 text-slate-400 font-medium">
+                                -
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            {% if l.exitoso %}
+                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Completado</span>
+                            {% else %}
+                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">Error</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="py-6 text-center text-slate-400">No hay registros de ejecución todavía.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function ejecutarRespaldoManual() {
+        const btn = document.getElementById('btn-backup-manual');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Generando Copia Atómica...</span>';
+        lucide.createIcons();
+
+        try {
+            const res = await fetch('/respaldos/ejecutar-manual', { method: 'POST' });
+            const data = await res.json();
+            if (data.exitoso) {
+                alert('¡Copia de seguridad generada con éxito!\nArchivo: ' + data.archivo + '\nTamaño: ' + data.tamano_mb + ' MB');
+                location.reload();
+            } else {
+                alert('Error al generar copia: ' + (data.error || 'Desconocido'));
+            }
+        } catch (err) {
+            alert('Error en la llamada: ' + err);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            lucide.createIcons();
+        }
+    }
+</script>
+{% endblock %}
