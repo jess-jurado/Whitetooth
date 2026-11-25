@@ -1,3 +1,14 @@
+import sys
+import os
+
+# Si se ejecuta con el Python del sistema (ej. Python 3.9 de macOS),
+# conmutar automáticamente al entorno virtual del proyecto donde están instaladas las dependencias
+script_dir = os.path.dirname(os.path.abspath(__file__))
+venv_python = os.path.join(script_dir, "venv", "bin", "python3")
+if os.path.exists(venv_python):
+    if os.path.realpath(sys.executable) != os.path.realpath(venv_python):
+        os.execv(venv_python, [venv_python] + sys.argv)
+
 import uvicorn
 import socket
 import webbrowser
@@ -48,7 +59,7 @@ if __name__ == "__main__":
     print("🦷 WHITETOOTH - Sistema Integral de Gestión Clínica Dental")
     print("=" * 68)
     if puerto != SERVER_PORT:
-        print(f"ℹ️  El puerto {SERVER_PORT} estaba ocupado. Usando puerto alternativo {puerto}.")
+        print(f"ℹ️  El puerto {SERVER_PORT} estaba en uso. Usando puerto alternativo {puerto}.")
     print(f"➜ Abriendo interfaz gráfica en: {url_local}")
     print(f"➜ Acceso desde Torre 2 / Gabinete (Red LAN): {url_lan}")
     print(f"➜ Base de datos SQLite: Segura y en caliente con respaldo diario")
