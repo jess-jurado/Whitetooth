@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from backend.database import get_db, STORAGE, engine
 from backend.models.entities import User, LoginSession, Patient, Catalog, Budget, Treatment, ClinicalEntry, Appointment, Invoice, Payment, Document, Audit, Room
-from backend.schemas import LoginIn, UserIn, PatientIn, CatalogIn, BudgetIn, TreatmentIn, StateIn, EntryIn, AppointmentIn, AppointmentState, PaymentIn, RoomIn, AcceptBudgetIn
+from backend.schemas import LoginIn, UserIn, PatientIn, CatalogIn, BudgetIn, TreatmentIn, StateIn, EntryIn, AppointmentIn, AppointmentReschedule, AppointmentState, PaymentIn, RoomIn, AcceptBudgetIn
 from backend.services.security import current_user, require, audit, hash_password, verify_password, token_hash
 from backend.services.pdf import budget_pdf
 from backend.services.backup import snapshot
@@ -350,29 +350,82 @@ def appointments(day:Optional[date]=None,start:Optional[date]=None,end:Optional[
     rows=db.query(Appointment).filter(Appointment.starts_at < str(end+timedelta(days=1)),Appointment.ends_at > str(start)+'T00:00:00').order_by(Appointment.starts_at,Appointment.id)
     return [dict(obj(a),patient=get(db,Patient,a.patient_id).name,professional=get(db,User,a.professional_id).name) for a in rows]
 
-@router.post('/appointments')
-def add_appointment(data:AppointmentIn,user=Depends(current_user),db:Session=Depends(get_db)):
-    get(db,Patient,data.patient_id)
-    lock_agenda(db)
-    if not db.query(Room).filter_by(name=data.room, active=True).first():
+def check_appointment_slot(db, starts_at, ends_at, room, patient_id, professional_id, excluded_id=None):
+    if not db.query(Room).filter_by(name=room, active=True).first():
         raise HTTPException(422, 'Selecciona un gabinete activo')
-    professional=get(db,User,data.professional_id)
-    if professional.role not in ('admin','clinico') or not professional.active:
-        raise HTTPException(422,'Profesional no válido')
-    start=data.starts_at.isoformat(timespec='seconds'); end=(data.starts_at+timedelta(minutes=data.duration)).isoformat(timespec='seconds')
-    conflict=db.query(Appointment).filter(Appointment.status!='Cancelada',Appointment.starts_at<end,Appointment.ends_at>start,((Appointment.professional_id==data.professional_id)|(Appointment.room==data.room)|(Appointment.patient_id==data.patient_id))).first()
-    if conflict:
-        raise HTTPException(409,'Horario ocupado para el paciente, profesional o gabinete')
-    row=Appointment(**data.model_dump(exclude={'duration','starts_at'}),starts_at=start,ends_at=end)
-    db.add(row); db.flush(); audit(db,user,'create','appointment',row.id); db.commit(); return obj(row)
+    professional = get(db, User, professional_id)
+    if professional.role not in ('admin', 'clinico') or not professional.active:
+        raise HTTPException(422, 'Profesional no válido')
+
+    collisions = db.query(Appointment).filter(
+        Appointment.status != 'Cancelada',
+        Appointment.starts_at < ends_at,
+        Appointment.ends_at > starts_at,
+        (Appointment.professional_id == professional_id)
+        | (Appointment.room == room)
+        | (Appointment.patient_id == patient_id),
+    )
+    if excluded_id is not None:
+        collisions = collisions.filter(Appointment.id != excluded_id)
+    if collisions.first():
+        raise HTTPException(409, 'Horario ocupado para el paciente, profesional o gabinete')
+
+
+def appointment_period(start, duration):
+    try:
+        end = start + duration
+    except OverflowError:
+        raise HTTPException(422, 'La cita debe terminar en una fecha válida')
+    return start.isoformat(timespec='seconds'), end.isoformat(timespec='seconds')
+
+
+@router.post('/appointments')
+def add_appointment(data: AppointmentIn, user=Depends(current_user), db: Session=Depends(get_db)):
+    get(db, Patient, data.patient_id)
+    lock_agenda(db)
+    start, end = appointment_period(data.starts_at, timedelta(minutes=data.duration))
+    check_appointment_slot(db, start, end, data.room, data.patient_id, data.professional_id)
+    row = Appointment(**data.model_dump(exclude={'duration', 'starts_at'}), starts_at=start, ends_at=end)
+    db.add(row)
+    db.flush()
+    audit(db, user, 'create', 'appointment', row.id)
+    db.commit()
+    return obj(row)
+
+
+@router.patch('/appointments/{id}/schedule')
+def reschedule_appointment(id: int, data: AppointmentReschedule, user=Depends(current_user), db: Session=Depends(get_db)):
+    lock_agenda(db)
+    row = get(db, Appointment, id)
+    if row.status not in ('Confirmada', 'En espera'):
+        raise HTTPException(409, 'Solo se pueden mover citas confirmadas o en espera')
+    if (row.starts_at, row.room) != (data.expected_start, data.expected_room):
+        raise HTTPException(409, 'La cita ya cambió de horario o gabinete. Vuelve a seleccionarla tras actualizar la agenda')
+
+    old_start = datetime.fromisoformat(row.starts_at)
+    duration = datetime.fromisoformat(row.ends_at) - old_start
+    start, end = appointment_period(data.starts_at, duration)
+    if (row.starts_at, row.room) == (start, data.room):
+        return obj(row)
+    check_appointment_slot(db, start, end, data.room, row.patient_id, row.professional_id, excluded_id=row.id)
+
+    previous = {'starts_at': row.starts_at, 'ends_at': row.ends_at, 'room': row.room}
+    row.starts_at, row.ends_at, row.room = start, end, data.room
+    current = {'starts_at': start, 'ends_at': end, 'room': data.room}
+    audit(db, user, 'reschedule', 'appointment', id, {'previous': previous, 'current': current})
+    db.commit()
+    return obj(row)
+
 
 @router.patch('/appointments/{id}')
 def appointment_status(id:int,data:AppointmentState,user=Depends(current_user),db:Session=Depends(get_db)):
+    lock_agenda(db)
     row=get(db,Appointment,id)
     transitions={'Confirmada':['En espera','Completada','Cancelada'],'En espera':['Completada','Cancelada'],'Completada':[],'Cancelada':[]}
     if data.status not in transitions[row.status]:
         raise HTTPException(409,'Cambio de cita no permitido')
     row.status=data.status; audit(db,user,'status','appointment',id,{'to':row.status}); db.commit(); return obj(row)
+
 
 @router.post('/patients/{id}/documents')
 async def upload(id:int,file:UploadFile=File(...),user=Depends(current_user),db:Session=Depends(get_db)):

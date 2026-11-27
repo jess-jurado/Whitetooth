@@ -59,19 +59,30 @@ class EntryIn(DentalSelection):
     kind: Literal['Diagnóstico','Nota']
     text: str = Field(min_length=2, max_length=5000)
 
-class AppointmentIn(Strict):
-    patient_id: int
-    professional_id: int
+class AppointmentStart(Strict):
     starts_at: datetime
-    duration: int = Field(ge=15, le=240)
-    room: str = Field(min_length=2, max_length=30)
-    reason: str = Field(min_length=2, max_length=200)
+
     @field_validator('starts_at')
     @classmethod
     def local_time(cls, value):
         if value.tzinfo is not None:
             raise ValueError('Usa hora local Europe/Madrid sin zona')
         return value
+
+
+class AppointmentIn(AppointmentStart):
+    patient_id: int
+    professional_id: int
+    duration: int = Field(ge=15, le=240)
+    room: str = Field(min_length=2, max_length=30)
+    reason: str = Field(min_length=2, max_length=200)
+
+
+class AppointmentReschedule(AppointmentStart):
+    room: str = Field(min_length=2, max_length=30)
+    expected_start: str = Field(min_length=19, max_length=19)
+    expected_room: str = Field(min_length=2, max_length=30)
+
 
 class AppointmentState(Strict):
     status: Literal['Confirmada','En espera','Completada','Cancelada']

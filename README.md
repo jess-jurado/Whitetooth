@@ -57,6 +57,8 @@ La agenda ofrece **Día, Semana, Mes y Selección**. En el calendario lateral se
 
 Los botones −/+ y el deslizador ajustan la altura de las horas (50–175 %). Al alejar desde el mínimo se pasa al mes; al acercar desde el mes se vuelve a la semana, y desde el máximo semanal se amplía al día. También se puede cambiar de vista directamente. Las cabeceras de día abren la vista diaria; Hoy y las flechas desplazan el periodo.
 
+Arrastra citas confirmadas o en espera a una franja de otro día o gabinete para reprogramarlas en intervalos de 15 minutos. Si sueltas la cita sobre un día del calendario mensual o lateral, conserva la hora y el gabinete. Mantén la cita sobre una flecha del calendario lateral para avanzar o retroceder meses. Desde el detalle, **Mover cita** permite elegir cualquier fecha, hora y gabinete con el teclado o en pantallas táctiles. La agenda conserva la duración, comprueba solapamientos y registra el cambio en auditoría.
+
 Al pulsar una franja libre se abre el alta de cita con fecha y hora precargadas. Al pulsar una cita se muestra su detalle, estado y acceso a la ficha. Los dos meses laterales marcan los días con citas. Los filtros permiten elegir gabinete e incluir canceladas. La vista diaria separa los gabinetes en columnas y las franjas libres son de 15 minutos. Las citas simultáneas ocupan columnas independientes y las que cruzan medianoche aparecen en ambos días. En pantallas estrechas, el calendario admite desplazamiento horizontal.
 
 `GET /api/appointments?start=AAAA-MM-DD&end=AAAA-MM-DD` consulta un intervalo inclusivo de hasta 62 días; sigue disponible el parámetro `day` para un día. La interfaz descarta respuestas antiguas al cambiar rápidamente de periodo.
@@ -111,7 +113,6 @@ Configurar `DATABASE_URL=postgresql+psycopg://usuario:clave@host/dentalis` y opc
 - **Facturación:** documentos internos de demostración, sin emisión de facturas fiscales ni integración tributaria. Faltan series fiscales, impuestos y rectificaciones.
 - **Seguridad de producción:** faltan recuperación/cambio de contraseña, MFA, administración de bajas, rate limiting compartido, cifrado de datos y copias, procedimientos de recuperación, auditoría protegida frente a administradores de la BD, antivirus y revisión independiente.
 - **Clínica:** falta validación profesional del odontograma, correcciones con contrapartida, estados diagnósticos y evolución avanzada, consentimientos firmados y permisos por centro.
-- **Agenda:** permite crear y cambiar estado; reprogramar requiere cancelar y crear una nueva cita.
 - **Interfaz:** formularios funcionales; quedan pruebas exhaustivas de accesibilidad, foco de modales y escenarios de red inestable.
 - Sin multiclínica, migración desde MNprogram ni despliegue externo. No se ha enviado nada a Jesús ni a GitHub.
 
