@@ -48,3 +48,8 @@
 }
 .appointment-reschedule h3{margin:0 0 16px}
 .appointment-reschedule .actions{justify-content:flex-end}
+
+.appointment-reminder h3{margin:0 0 12px}
+.appointment-reminder label{margin:12px 0}
+.appointment-reminder textarea{color:#263e35;line-height:1.55}
+.appointment-reminder .actions{justify-content:flex-end;flex-wrap:wrap;margin:16px 0 5px}

@@ -11,7 +11,7 @@ La rama `codex/integracion-dentalis` une la historia de Whitetooth (base `0bb7e7
 - **Caja diaria** en horario de Madrid, con detalle y filtro por forma de pago. Admite Bizum y financiación al registrar un cobro.
 - **Respaldo manual** para administradores. El ZIP contiene una instantánea de SQLite y sus documentos adjuntos. Las sesiones se eliminan de la copia. El ZIP requiere almacenamiento privado.
 
-La base SQLite incluida en Whitetooth se excluye del árbol actual. Permanece en los commits originales de Whitetooth. Esta rama prepara una demo ficticia y no migra registros de Whitetooth. El envío de WhatsApp, la copia automática por red y la facturación fiscal quedan fuera de esta integración.
+La base SQLite incluida en Whitetooth se excluye del árbol actual. Permanece en los commits originales de Whitetooth. Esta rama prepara una demo ficticia y no migra registros de Whitetooth. Los recordatorios de WhatsApp y las copias automáticas se configuran como se indica abajo. La facturación fiscal sigue pendiente.
 
 ## Arrancar en macOS
 
@@ -62,6 +62,20 @@ Arrastra citas confirmadas o en espera a una franja de otro día o gabinete para
 Al pulsar una franja libre se abre el alta de cita con fecha y hora precargadas. Al pulsar una cita se muestra su detalle, estado y acceso a la ficha. Los dos meses laterales marcan los días con citas. Los filtros permiten elegir gabinete e incluir canceladas. La vista diaria separa los gabinetes en columnas y las franjas libres son de 15 minutos. Las citas simultáneas ocupan columnas independientes y las que cruzan medianoche aparecen en ambos días. En pantallas estrechas, el calendario admite desplazamiento horizontal.
 
 `GET /api/appointments?start=AAAA-MM-DD&end=AAAA-MM-DD` consulta un intervalo inclusivo de hasta 62 días; sigue disponible el parámetro `day` para un día. La interfaz descarta respuestas antiguas al cambiar rápidamente de periodo.
+
+## Recordatorios por WhatsApp
+
+Desde el detalle de una cita confirmada o en espera, **Preparar WhatsApp** muestra el teléfono de la ficha y un mensaje con la fecha y la hora. La demo permite revisar y copiar el texto. Para habilitar **Abrir WhatsApp** en una instalación, configura `DENTALIS_WHATSAPP_ENABLED=1` y el nombre que usará el mensaje en `DENTALIS_CLINIC_NAME`. Mantén el enlace deshabilitado en las instalaciones de demostración. Dentalis registra que se preparó el borrador. La persona que lo abre revisa y envía el mensaje desde WhatsApp.
+
+## Copias programadas
+
+En macOS o Linux con SQLite en disco, inicia la aplicación con `DENTALIS_BACKUP_AT=21:00` para programar la copia diaria en horario de Madrid. Con el servidor encendido, la tarea comprueba cada cinco minutos si hay una copia del día. Si arrancas después de la hora prevista, genera la copia pendiente al arrancar. Los ZIP se conservan en `storage/backups/`, fuera de Git. Cada uno contiene SQLite y los documentos asociados, con las sesiones eliminadas.
+
+Opcionalmente, configura `DENTALIS_BACKUP_NETWORK_DIR` con la ruta absoluta de una carpeta privada ya montada y con permiso de escritura. La copia local se crea primero. Si la red falla, se vuelve a intentar replicar la última copia en la siguiente comprobación. Administración muestra la última copia y su estado de réplica. Los ZIP se guardan sin cifrado propio. Protege el almacenamiento local y la carpeta de red. La demo local se puede probar sin configurar una carpeta externa.
+
+## Facturación fiscal
+
+Whitetooth aporta un flujo de numeración y rectificativas para revisar. El código de esa rama usa importes de punto flotante y carece de generación de registros de facturación encadenados y de QR tributario. Dentalis mantiene los documentos internos de cobro mientras se diseña la emisión fiscal. Queda por definir la modalidad, la numeración y los datos del emisor y diseñar el registro fiscal, el flujo de rectificaciones y las pruebas correspondientes. [Requisitos de los sistemas de facturación de la AEAT](https://sede.agenciatributaria.gob.es/Sede/procedimientos/IZ86.shtml)
 
 ## Arquitectura
 

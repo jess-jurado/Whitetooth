@@ -9,3 +9,6 @@
 .room-editor .actions,.cash-controls strong{margin-left:auto}
 .room-dot{margin-right:5px}
 .cash-empty{padding:12px 24px 24px}
+
+.backup-status{padding:0 24px 18px}
+.backup-status p{font-size:12px}

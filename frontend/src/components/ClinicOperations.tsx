@@ -94,17 +94,64 @@ export function DailyCash({initialDay, request, openPatient}: {
   </section>;
 }
 
-export function BackupPanel({download}: {download: () => Promise<void>}) {
+type BackupState = {
+  enabled: boolean;
+  at?: string;
+  latest?: string | null;
+  network_enabled?: boolean;
+  network_synced?: boolean;
+  error: string;
+};
+
+export function BackupPanel({download, request}: {
+  download: () => Promise<void>;
+  request: (path: string) => Promise<BackupState>;
+}) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-  return <section className="panel"><div className="panel-heading">
-    <div><h2>Copias de seguridad</h2><p>Descarga local de la base SQLite y los documentos adjuntos.</p></div>
-    <button disabled={pending} onClick={async () => {
-      setPending(true);
-      setError('');
-      try { await download(); }
-      catch (reason) { setError((reason as Error).message); }
-      finally { setPending(false); }
-    }}><Download size={16}/> {pending ? 'Preparando…' : 'Descargar copia'}</button>
-  </div>{error && <div className="error" role="alert">{error}</div>}</section>;
+  const [status, setStatus] = useState<BackupState>();
+  const [statusError, setStatusError] = useState('');
+
+  useEffect(() => {
+    let current = true;
+    async function refresh() {
+      try {
+        const next = await request('/backups/status');
+        if (current) {
+          setStatus(next);
+          setStatusError('');
+        }
+      } catch (reason) {
+        if (current) setStatusError((reason as Error).message);
+      }
+    }
+    void refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    return () => {
+      current = false;
+      window.clearInterval(timer);
+    };
+  }, [request]);
+
+  return <section className="panel">
+    <div className="panel-heading">
+      <div><h2>Copias de seguridad</h2><p>Base SQLite y documentos adjuntos.</p></div>
+      <button disabled={pending} onClick={async () => {
+        setPending(true);
+        setError('');
+        try { await download(); }
+        catch (reason) { setError((reason as Error).message); }
+        finally { setPending(false); }
+      }}><Download size={16}/> {pending ? 'Preparando…' : 'Descargar copia'}</button>
+    </div>
+    <div className="backup-status">
+      {status && <>
+        <p>{status.enabled ? `Copia automática diaria · ${status.at} · Europe/Madrid` : 'Copia automática desactivada'}</p>
+        {status.enabled && <p>{status.latest ? 'Última copia · ' + status.latest : 'Todavía no hay copias programadas.'}</p>}
+        {status.network_enabled && <p>{status.network_synced ? 'Última copia replicada en red' : 'Copia en red pendiente'}</p>}
+      </>}
+      {(statusError || status?.error) && <p role="alert" className="error">{statusError || status?.error}</p>}
+      {error && <p role="alert" className="error">{error}</p>}
+    </div>
+  </section>;
 }

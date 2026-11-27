@@ -1,7 +1,8 @@
 import {useEffect,useMemo,useRef,useState,type DragEvent} from 'react';
-import {CalendarDays,ChevronLeft,ChevronRight,Minus,Plus,X,ArrowRight} from 'lucide-react';
+import {CalendarDays,ChevronLeft,ChevronRight,Minus,Plus,X,ArrowRight,MessageCircle} from 'lucide-react';
 import type {Room} from './ClinicOperations';
 import RescheduleForm from './RescheduleForm';
+import AppointmentReminder from './AppointmentReminder';
 import {canMoveAppointment, useAppointmentDrag, type DropTarget, type ScheduleSource} from './useAppointmentDrag';
 import './agenda.css';
 type Appointment={id:number;patient_id:number;patient:string;professional:string;starts_at:string;ends_at:string;room:string;reason:string;status:string};
@@ -31,6 +32,7 @@ export default function Agenda({today,initialDay,revision,rooms,request,onCreate
  const [moveError,setMoveError]=useState('');
  const [moveNotice,setMoveNotice]=useState('');
  const [editingSchedule,setEditingSchedule]=useState(false);
+ const [showReminder,setShowReminder]=useState(false);
  const [scheduleRevision,setScheduleRevision]=useState(0);
  const lastSelected=useRef(initialDay),scroll=useRef<HTMLDivElement>(null);
  const visible=useMemo(()=>view==='Mes'?days(week(monthStart(anchor)),42):view==='Semana'?days(week(anchor),7):view==='Día'?[anchor]:[...selected].sort(),[view,anchor,selected]);
@@ -72,6 +74,7 @@ export default function Agenda({today,initialDay,revision,rooms,request,onCreate
  function openAppointment(appointment: Appointment) {
    setMoveError('');
    setEditingSchedule(false);
+   setShowReminder(false);
    setActive(appointment.id);
  }
 
@@ -220,7 +223,7 @@ export default function Agenda({today,initialDay,revision,rooms,request,onCreate
        <button className="icon" aria-label="Cerrar detalle de cita" disabled={moving} onClick={()=>setActive(null)}><X size={20}/></button>
      </div>
      <div className="appointment-detail-body">
-       {editingSchedule ? <RescheduleForm
+       {showReminder ? <AppointmentReminder id={chosen.id} request={request} close={()=>setShowReminder(false)}/> : editingSchedule ? <RescheduleForm
          appointment={chosen} rooms={rooms} pending={moving} error={moveError} save={reschedule}
          close={() => {setEditingSchedule(false);setMoveError('')}}/> : <>
          <span className={'badge state-'+chosen.status.replaceAll(' ','-')}>{chosen.status}</span>
@@ -233,6 +236,7 @@ export default function Agenda({today,initialDay,revision,rooms,request,onCreate
              {(chosen.status==='Confirmada'?['En espera','Completada','Cancelada']:['Completada','Cancelada']).map(status=><option key={status}>{status}</option>)}
            </select></label>
            <button className="secondary" onClick={() => {setMoveError('');setEditingSchedule(true)}}>Mover cita</button>
+           <button className="secondary" onClick={() => setShowReminder(true)}><MessageCircle size={16}/> Preparar WhatsApp</button>
          </>}
          <button onClick={()=>onPatient(chosen.patient_id)}>Abrir ficha del paciente <ArrowRight size={16}/></button>
        </>}

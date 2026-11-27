@@ -21,6 +21,8 @@ from backend.schemas import LoginIn, UserIn, PatientIn, CatalogIn, BudgetIn, Tre
 from backend.services.security import current_user, require, audit, hash_password, verify_password, token_hash
 from backend.services.pdf import budget_pdf
 from backend.services.backup import snapshot
+from backend.services.reminders import prepare_reminder
+from backend.services.scheduled_backup import backup_status
 
 router = APIRouter(prefix='/api')
 login_attempts = defaultdict(list)
@@ -321,6 +323,13 @@ def update_room(id: int, data: RoomIn, user=Depends(current_user), db: Session=D
     return save_room(db, user, data, get(db, Room, id))
 
 
+@router.get('/backups/status')
+def scheduled_backup_status(request: Request, user=Depends(current_user)):
+    require(user, 'admin')
+    state = request.app.state
+    return backup_status(state.backup_schedule, state.backup_config_error, state.backup_error)
+
+
 @router.post('/backups')
 def create_backup(user=Depends(current_user), db: Session=Depends(get_db)):
     require(user, 'admin')
@@ -391,6 +400,20 @@ def add_appointment(data: AppointmentIn, user=Depends(current_user), db: Session
     audit(db, user, 'create', 'appointment', row.id)
     db.commit()
     return obj(row)
+
+
+@router.post('/appointments/{id}/whatsapp-draft')
+def appointment_whatsapp_draft(id: int, user=Depends(current_user), db: Session=Depends(get_db)):
+    appointment = get(db, Appointment, id)
+    if appointment.status not in ('Confirmada', 'En espera'):
+        raise HTTPException(409, 'Esta cita ya no admite recordatorios')
+    patient = get(db, Patient, appointment.patient_id)
+    enabled = os.getenv('DENTALIS_WHATSAPP_ENABLED') == '1' and os.getenv('DENTALIS_DEMO') != '1'
+    clinic = os.getenv('DENTALIS_CLINIC_NAME', '').strip() or 'tu clínica'
+    result = prepare_reminder(appointment, patient, clinic, enabled)
+    audit(db, user, 'prepare_whatsapp_draft', 'appointment', id)
+    db.commit()
+    return result
 
 
 @router.patch('/appointments/{id}/schedule')
