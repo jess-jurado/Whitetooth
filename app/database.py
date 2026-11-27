@@ -309,17 +309,17 @@ def init_db():
             VALUES (?, ?, ?, ?, ?, ?, ?);
         """, usuarios_seed)
 
-    # Seed cabinets
+    # Seed cabinets (1 activo por defecto, ampliable en opciones)
     cursor.execute("SELECT COUNT(*) FROM gabinetes;")
     if cursor.fetchone()[0] == 0:
         gabinetes_seed = [
-            ("DESPACHO 1 (General)", "#3B82F6", 1),
-            ("DESPACHO 2 (Cirugía/Implantes)", "#8B5CF6", 2),
-            ("DESPACHO 3 (Ortodoncia / Higiene)", "#10B981", 3),
+            ("GABINETE 1 (Principal)", "#0284C7", 1, 1),
+            ("GABINETE 2", "#8B5CF6", 2, 0),
+            ("GABINETE 3", "#10B981", 3, 0),
         ]
         cursor.executemany("""
-            INSERT INTO gabinetes (nombre, color, orden)
-            VALUES (?, ?, ?);
+            INSERT INTO gabinetes (nombre, color, orden, activo)
+            VALUES (?, ?, ?, ?);
         """, gabinetes_seed)
 
     # Seed treatment catalog

@@ -4,6 +4,8 @@ __pycache__/
 .DS_Store
 *.swp
 data/backups/whitetooth_backup_*.db
+*.db-wal
+*.db-shm
 
 # Imágenes y capturas de ejemplo
 *.jpeg
