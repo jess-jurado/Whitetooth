@@ -78,12 +78,13 @@ graph TD
 - Vinculación directa al catálogo de tratamientos y recálculo automático de honorarios y descuentos.
 - Botón *"Marcar Realizado"* con 1 clic: traslada la actuación al historial clínico del paciente.
 
-### 3. 📅 Agenda Multi-Gabinete
-- Vista diaria en columnas simultáneas para **Despacho 1**, **Despacho 2** y **Despacho 3**.
-- Intervalos de tiempo de **15 minutos** (de 08:00 a 20:30).
-- Código de color personalizable por gabinete y doctor asignado.
-- Estados de cita: *Programada*, *Confirmada*, *En Sala de Espera*, *En Consulta*, *Realizada*, *No Asiste* y *Cancelada*.
-- Envío de recordatorio por WhatsApp a un clic con plantilla predefinida.
+### 3. 📅 Agenda Clínica y Planificación
+- **Gabinete Único por defecto**: Ajustado a la operativa real de la clínica para una visualización amplia y despejada del día.
+- **Gestión Dinámica de Gabinetes (Opciones)**: Modal para activar o desactivar gabinetes existentes y añadir nuevos gabinetes con código de color personalizado cuando la clínica lo requiera, adaptando la cuadrícula en columnas paralelas automáticamente.
+- **Doble Mini-Calendario Mensual en Paralelo**: Barra lateral con visualización simultánea del **Mes en Curso** y del **Próximo Mes**, navegación rápida por clic e indicadores (puntos azules) en días con citas programadas.
+- **Intervalos de 15 minutos**: De 08:00 a 20:30 con asignación rápida de cita en huecos libres.
+- **Estados de cita**: *Programada*, *Confirmada*, *En Sala de Espera*, *En Consulta*, *Realizada*, *No Asiste* y *Cancelada*.
+- **Integración con WhatsApp**: Envío de recordatorio a un clic con plantilla personalizada.
 
 ### 4. 📄 Presupuestos Clínicos con Aceptación en 1 Clic
 - Creación de presupuestos con numeración secuencial anual correlativa (`#320/2026`).
