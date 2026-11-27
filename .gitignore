@@ -1,14 +1,17 @@
-venv/
+.venv/
 __pycache__/
+.pytest_cache/
 *.pyc
+.env
+storage/*
+!storage/.gitkeep
+frontend/node_modules/
+frontend/dist/
+*.tsbuildinfo
 .DS_Store
-*.swp
-data/backups/whitetooth_backup_*.db
+tmp/
+/data/
+*.db
 *.db-wal
 *.db-shm
-
-# Imágenes y capturas de ejemplo
-*.jpeg
-*.jpg
-*.png
-IMG_*
+*.sqlite3

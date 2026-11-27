@@ -1,208 +1,118 @@
-# 🦷 Whitetooth — Sistema Integral de Gestión para Clínicas Dentales
+# Dentalis · MVP local
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.14%20%7C%20FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/SQLite-WAL%20Mode-003B57?style=for-the-badge&logo=sqlite&logoColor=white" alt="SQLite" />
-  <img src="https://img.shields.io/badge/TailwindCSS-Modern%20UI-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/Coste%20Mantenimiento-0%20%E2%82%AC%20%2F%20a%C3%B1o-10B981?style=for-the-badge" alt="Coste 0" />
-  <img src="https://img.shields.io/badge/Normativa-Veri*factu%20%7C%20RGPD-blue?style=for-the-badge" alt="Normativa" />
-</p>
+Aplicación funcional de demostración para una clínica dental. Backend FastAPI + SQLAlchemy, React + TypeScript + Tailwind CSS y odontograma SVG. Solo datos ficticios. La versión anterior de `Nodule/dentalis` permanece intacta.
 
----
+## Integración con Whitetooth
 
-## 📖 Descripción del Proyecto
+La rama `codex/integracion-dentalis` une la historia de Whitetooth (base `0bb7e74`) y una instantánea del código local de Dentalis. La aplicación unificada usa el modelo y los permisos de Dentalis, con estas ideas adaptadas de Whitetooth:
 
-**Whitetooth** es una solución de gestión odontológica y clínica desarrollada a medida para sustituir software propietario obsoleto (como *MN Program - Odontólogos*). Proporciona una interfaz web moderna, ultrarrápida e intuitiva que se ejecuta íntegramente de forma local en la clínica, **eliminando por completo las cuotas anuales de mantenimiento o licencias en la nube (0 €/año)**.
+- **Agenda** con dos meses, indicadores de citas, gabinetes administrables y franjas de 15 minutos. Una instalación nueva comienza con un gabinete. Al abrir una base anterior de Dentalis, la aplicación recupera los gabinetes que aparecen en sus citas.
+- **Aceptación conjunta** de líneas pendientes. Cada línea pasa a Aceptado dentro de una transacción y mantiene su registro de auditoría y su vínculo al odontograma.
+- **Caja diaria** en horario de Madrid, con detalle y filtro por forma de pago. Admite Bizum y financiación al registrar un cobro.
+- **Respaldo manual** para administradores. El ZIP contiene una instantánea de SQLite y sus documentos adjuntos. Las sesiones se eliminan de la copia. El ZIP requiere almacenamiento privado.
 
-El sistema está diseñado específicamente para operar en un entorno de dos o más puestos en **Red Local (LAN)**:
-- **Torre 1 (Recepción / Servidor)**: Ejecuta el motor FastAPI y almacena la base de datos SQLite en modo `WAL` (*Write-Ahead Logging*).
-- **Torre 2 (Gabinete Médico / Doctores) y Tablets**: Acceden a través de cualquier navegador web estándar conectándose a la IP local de la Torre 1 (ej. `http://192.168.1.XX:8000`) sin necesidad de instalar bases de datos cliente ni correr riesgos de corrupción por compartir archivos `.db` en carpetas compartidas de Windows (SMB).
+La base SQLite incluida en Whitetooth se excluye del árbol actual. Permanece en los commits originales de Whitetooth. Esta rama prepara una demo ficticia y no migra registros de Whitetooth. El envío de WhatsApp, la copia automática por red y la facturación fiscal quedan fuera de esta integración.
 
----
+## Arrancar en macOS
 
-## 🏛️ Arquitectura de Red y Flujo de Trabajo
+Ejecuta el script desde la raíz de este repositorio.
 
-```mermaid
-graph TD
-    subgraph Torre_1 ["Torre 1 (Recepción / Servidor Principal)"]
-        App["Servidor Whitetooth (FastAPI + Jinja2)"]
-        DB[(Base de Datos SQLite en modo WAL)]
-        BackupDaemon["Servicio de Respaldos Atómicos (21:00)"]
-        NavegadorT1["Navegador Recepción: http://localhost:8000"]
-
-        App --> DB
-        BackupDaemon -->|VACUUM INTO| LocalBackups["/data/backups/"]
-        NavegadorT1 --> App
-    end
-
-    subgraph Red_LAN ["Red Local de la Clínica (Sin costes mensuales)"]
-        Router["Router / Switch de la Clínica"]
-        Torre_1 --- Router
-    end
-
-    subgraph Torre_2 ["Torre 2 (Gabinete Médico)"]
-        NavegadorT2["Navegador Gabinete: http://192.168.1.XX:8000"]
-        LanBackupFolder["Carpeta Compartida: //TORRE2/CopiasWhitetooth/"]
-    end
-
-    subgraph Dispositivos_Moviles ["Dispositivos Móviles"]
-        Tablets["Tablets de Gabinete / Consentimientos"]
-    end
-
-    Router --- NavegadorT2
-    Router --- Tablets
-    BackupDaemon -.->|Replicación Automática LAN| LanBackupFolder
+```sh
+./scripts/start.sh
 ```
 
----
+Abre http://127.0.0.1:8000. En una instalación nueva el script pide la contraseña de `admin` (12 caracteres como mínimo) y carga cinco pacientes ficticios. Para detenerlo: Ctrl+C en la terminal del servidor.
 
-## ✨ Módulos y Funcionalidades Principales
+Requisitos: Python 3.9 o posterior y Node 20.19+/22.12+. Verificado en Mac ARM64, Python 3.9.6 y Node 24.11.1. Se recomienda actualizar Python antes de preparar producción.
 
-### 1. 👥 Directorio y Ficha de Paciente Integral
-- **Búsqueda instantánea (Ctrl+K)** por Nombre, Apellidos, DNI/NIE, Teléfono Móvil o Nº de Expediente.
-- Filtros rápidos por estado de ficha (*Activos*, *Todos*) y pacientes con **Saldo Deudor**.
-- **Panel clínico superior**: Resumen en tiempo real del saldo pendiente, total de tratamientos realizados, total cobrado y total presupuestado.
-- **Alertas Médicas Destacadas**: Alergias medicamentosas (Penicilina, Látex, etc.) y antecedentes de riesgo visibles permanentemente para evitar incidencias en consulta.
-- Registro legal inalterable de **Consentimiento RGPD / LOPD-GDD**.
-- **Lanzador de WhatsApp**: Enlaces directos a `wa.me` sin coste para confirmación de citas, revisiones y recordatorios.
+### Instalación manual y reproducible
 
-### 2. 🦷 Odontograma Interactivo SVG (FDI)
-- Notación internacional **FDI**:
-  - Dentición **Adulto**: Cuadrantes 1, 2, 3 y 4 (Piezas 11 a 48).
-  - Dentición **Infantil / Temporal**: Cuadrantes 5, 6, 7 y 8 (Piezas 51 a 85).
-- **Representación anatómica geométrica de 5 caras por pieza**: Vestibular (V), Lingual/Palatina (L), Mesial (M), Distal (D) y Oclusal/Incisal (O).
-- Código visual de colores médico:
-  - 🔵 **Azul**: Tratamiento previo / anterior (empastes antiguos, coronas preexistentes).
-  - 🔴 **Rojo**: Tratamiento previsto / pendiente (caries detectada, endodoncia presupuestada).
-  - 🟢 **Verde**: Tratamiento realizado en la clínica.
-- Vinculación directa al catálogo de tratamientos y recálculo automático de honorarios y descuentos.
-- Botón *"Marcar Realizado"* con 1 clic: traslada la actuación al historial clínico del paciente.
-
-### 3. 📅 Agenda Clínica y Planificación
-- **Gabinete Único por defecto**: Ajustado a la operativa real de la clínica para una visualización amplia y despejada del día.
-- **Gestión Dinámica de Gabinetes (Opciones)**: Modal para activar o desactivar gabinetes existentes y añadir nuevos gabinetes con código de color personalizado cuando la clínica lo requiera, adaptando la cuadrícula en columnas paralelas automáticamente.
-- **Doble Mini-Calendario Mensual en Paralelo**: Barra lateral con visualización simultánea del **Mes en Curso** y del **Próximo Mes**, navegación rápida por clic e indicadores (puntos azules) en días con citas programadas.
-- **Intervalos de 15 minutos**: De 08:00 a 20:30 con asignación rápida de cita en huecos libres.
-- **Estados de cita**: *Programada*, *Confirmada*, *En Sala de Espera*, *En Consulta*, *Realizada*, *No Asiste* y *Cancelada*.
-- **Integración con WhatsApp**: Envío de recordatorio a un clic con plantilla personalizada.
-
-### 4. 📄 Presupuestos Clínicos con Aceptación en 1 Clic
-- Creación de presupuestos con numeración secuencial anual correlativa (`#320/2026`).
-- Adición de líneas de tratamiento vinculadas al catálogo con pieza dental, caras y descuentos aplicados.
-- **Aceptación Automática**: Al pulsar *"Aceptar Presupuesto"*, todas las líneas presupuestadas se transfieren automáticamente como tratamientos activos previstos en el odontograma.
-- Vista imprimible optimizada para entrega física al paciente con condiciones y pie de firmas.
-
-### 5. 💰 Control de Cobros y Caja Diaria
-- Libro diario de cobros con desglose por forma de pago: **Efectivo**, **Tarjeta (TPV)**, **Bizum**, **Transferencia** y **Financiación**.
-- **Calculadora de Cambio**: Al registrar un cobro en efectivo, calcula al instante el cambio a devolver al paciente evitando errores de caja.
-- Emisión opcional de Factura Oficial directa vinculada a la entrada de caja.
-
-### 6. 🧾 Facturación Oficial y Facturas de Abono
-- **Cumplimiento de la Ley Antifraude / Veri\*factu (RD 1007/2023)**:
-  - Las facturas emitidas son inalterables y con numeración correlativa estricta (`OFICIAL #401/2026`).
-  - Las correcciones o anulaciones se realizan mediante **Facturas de Abono (Rectificativas)** en serie `ABONO`, referenciando obligatoriamente el número de factura original y el motivo legal de rectificación.
-- **Exención de IVA (0%)**: Regulada de conformidad con el **Art. 20.Uno.3º de la Ley 37/1992** del IVA (servicios sanitarios y estomatológicos).
-- Vista de impresión fiscal lista para el paciente o gestoría.
-
-### 7. 🛡️ Copias de Seguridad y Resiliencia en Red LAN
-- Copias atómicas en caliente utilizando `VACUUM INTO` de SQLite: no bloquea ni detiene el trabajo de los gabinetes durante el respaldo.
-- Programación automática diaria a las **21:00 hrs**.
-- Duplicación automática en red local a la **Torre 2** (`//TORRE2/CopiasWhitetooth/`) para contingencias en caso de avería de hardware en la máquina principal.
-- Botón *"Hacer Copia de Seguridad Ahora"* para respaldos manuales inmediatos y descarga de archivos `.db`.
-
----
-
-## ⚙️ Estructura del Proyecto
-
-```text
-Whitetooth/
-├── app/
-│   ├── config.py             # Configuración general (rutas, puertos, clínica)
-│   ├── database.py           # Esquema relacional SQLite (15 tablas) y semillas
-│   ├── backup_service.py     # Motor de respaldos atómicos VACUUM INTO y red LAN
-│   ├── main.py               # Aplicación FastAPI y rutas principales
-│   ├── routers/
-│   │   ├── pacientes.py      # Gestión de pacientes, historial y RGPD
-│   │   ├── agenda.py         # Agenda diaria multi-gabinete (15 min)
-│   │   ├── odontograma.py    # API REST del odontograma interactivo
-│   │   ├── presupuestos.py   # Presupuestos y conversión a tratamientos
-│   │   ├── cobros.py         # Libro de caja y calculadora de cambio
-│   │   ├── facturacion.py    # Facturación oficial y facturas de abono
-│   │   ├── whatsapp.py       # Generador de enlaces WhatsApp Web (0 €)
-│   │   └── respaldos.py      # Panel de copias y estado de red local
-│   └── templates/            # Plantillas Jinja2 con Tailwind CSS y Lucide Icons
-│       ├── base.html
-│       ├── index.html
-│       ├── pacientes.html
-│       ├── paciente_detalle.html
-│       ├── agenda.html
-│       ├── presupuestos.html
-│       ├── presupuesto_detalle.html
-│       ├── cobros.html
-│       ├── facturas.html
-│       ├── factura_detalle.html
-│       └── respaldos.html
-├── data/
-│   ├── whitetooth.db         # Base de datos SQLite activa (WAL Mode)
-│   └── backups/              # Almacén de copias de seguridad locales
-├── iniciar_whitetooth.command# Lanzador de doble clic para macOS
-├── run.py                    # Script de arranque con auto-detección y navegador
-├── requirements.txt          # Dependencias de Python
-└── README.md
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-lock.txt
+npm --prefix frontend ci
+npm --prefix frontend run build
+# Primer arranque: definir una contraseña propia en DENTALIS_ADMIN_PASSWORD.
+# DENTALIS_DEMO=1 carga los datos ficticios solamente si no existen usuarios.
+.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
----
+En desarrollo, ejecutar también `npm --prefix frontend run dev`: Vite reenvía `/api` al backend en 8000. La versión compilada se sirve directamente desde FastAPI. API interactiva en `/docs`.
 
-## 🚀 Puesta en Marcha Rápida
+## Recorrido de demostración
 
-### 1. Requisitos Previos
-- Python 3.10 o superior (recomendado Python 3.14 o 3.12).
-- Google Chrome, Safari, Firefox o Edge.
+1. Iniciar sesión y abrir Lucía Martín Demo en Pacientes.
+2. Seleccionar varias piezas FDI y superficies en Odontograma. Registrar un diagnóstico independiente del plan de tratamiento.
+3. Crear un presupuesto desde Presupuestos. Volver al odontograma, elegir piezas y añadir una línea de catálogo. El precio corresponde a toda la línea, no se multiplica por las piezas.
+4. En Presupuestos, acepta cada línea o usa **Aceptar líneas pendientes**. Continúa con **En curso → Realizado**. Comprobar los cambios en odontograma e historial. También se puede cancelar antes de realizar; los estados terminales no se reabren.
+5. Descargar el presupuesto PDF. Las líneas canceladas se muestran pero no suman al total vigente.
+6. Con todas las líneas realizadas o canceladas y al menos una realizada, emitir el documento interno de cobro. El presupuesto queda cerrado. En Cobros, registrar pagos parciales hasta liquidarlo.
+7. Añadir una cita. Se impiden solapamientos de paciente, gabinete o profesional; se permiten citas adyacentes.
+8. Subir un PDF, PNG o JPEG ficticio a Documentos y descargarlo con sesión clínica.
+9. En Administración, configura los gabinetes, crea usuarios, consulta la auditoría y descarga un respaldo local. En Cobros, filtra la caja diaria por fecha y método.
 
-### 2. Instalación
-Clonar el repositorio y preparar el entorno virtual:
-```bash
-git clone https://github.com/jess-jurado/Whitetooth.git
-cd Whitetooth
+## Agenda visual
 
-# Crear entorno virtual
-python3 -m venv venv
+La agenda ofrece **Día, Semana, Mes y Selección**. En el calendario lateral se pueden marcar días sueltos; Mayús + clic marca un intervalo. Los campos Desde/Hasta permiten elegir hasta 31 días; la selección puede abarcar hasta 62 días naturales. Las columnas muestran únicamente los días seleccionados, con sus citas reales.
 
-# Activar e instalar dependencias
-source venv/bin/activate
-pip install -r requirements.txt
+Los botones −/+ y el deslizador ajustan la altura de las horas (50–175 %). Al alejar desde el mínimo se pasa al mes; al acercar desde el mes se vuelve a la semana, y desde el máximo semanal se amplía al día. También se puede cambiar de vista directamente. Las cabeceras de día abren la vista diaria; Hoy y las flechas desplazan el periodo.
+
+Al pulsar una franja libre se abre el alta de cita con fecha y hora precargadas. Al pulsar una cita se muestra su detalle, estado y acceso a la ficha. Los dos meses laterales marcan los días con citas. Los filtros permiten elegir gabinete e incluir canceladas. La vista diaria separa los gabinetes en columnas y las franjas libres son de 15 minutos. Las citas simultáneas ocupan columnas independientes y las que cruzan medianoche aparecen en ambos días. En pantallas estrechas, el calendario admite desplazamiento horizontal.
+
+`GET /api/appointments?start=AAAA-MM-DD&end=AAAA-MM-DD` consulta un intervalo inclusivo de hasta 62 días; sigue disponible el parámetro `day` para un día. La interfaz descarta respuestas antiguas al cambiar rápidamente de periodo.
+
+## Arquitectura
+
+- `backend/database.py`: motor SQLAlchemy, sesión por petición, claves foráneas SQLite activas.
+- `backend/models/entities.py`: usuarios, sesiones, pacientes, catálogo, presupuestos, líneas de tratamiento, entradas clínicas, citas, documentos internos de cobro, pagos, documentos y auditoría.
+- `backend/schemas.py`: validación de entradas, importes enteros en céntimos, fechas, FDI permanente y temporal, superficies M/D/V/L/O/I.
+- `backend/routes/api.py`: endpoints autenticados, permisos y transacciones.
+- `backend/services/security.py`: PBKDF2-SHA256, sesiones opacas cuyo identificador se guarda hasheado, CSRF, control de roles.
+- `backend/services/pdf.py`: presupuesto PDF con tablas paginadas.
+- `backend/services/seed.py`: carga inicial explícita e idempotente.
+- `frontend/src/main.tsx`: interfaz React, formularios, navegación, SVG interactivo y consumo de API.
+- `frontend/src/style.css`: estilos y Tailwind; diseño adaptable.
+- `storage/`: SQLite y documentos privados; excluidos de Git y fuera del directorio público.
+
+**Una única fuente de tratamientos:** cada línea pertenece a un presupuesto y conserva sus piezas, superficies, precio, nombre del tratamiento en ese momento y estado. Odontograma y presupuesto leen las mismas líneas; el historial consulta los eventos de esas líneas. Los diagnósticos son entradas clínicas separadas y no se eliminan al completar un tratamiento. Sin registro no significa pieza sana. Si hay varias intervenciones sobre la misma superficie, se colorea la última línea registrada y se muestran marcadores de los estados presentes; el detalle debajo conserva todos los tratamientos. No sustituye una representación clínica validada.
+
+**Consistencia:** versión de tratamiento para evitar actualizaciones obsoletas; transacciones serializadas por presupuesto/factura y bloqueo de agenda; referencia única de pago para reintentos idempotentes; no se permite sobrepago. La interfaz genera una referencia por envío y bloquea el botón mientras guarda.
+
+**Fechas:** citas en hora local Europe/Madrid (sin zona en DB); eventos y auditoría UTC. El despliegue debe usar la zona de la clínica para sus métricas diarias. No incluye todavía gestión de clínicas en distintas zonas horarias.
+
+### Roles
+
+| Acción | Administrador | Clínico | Recepción |
+|---|---|---|---|
+| Pacientes, citas y cobros | Sí | Sí | Sí |
+| Diagnósticos, historial, documentos y PDF clínico | Sí | Sí | No |
+| Crear planes y cambiar tratamientos | Sí | Sí | No |
+| Gestionar catálogo, gabinetes y usuarios | Sí | No | No |
+| Descargar copias de seguridad | Sí | No | No |
+| Consultar auditoría | Sí | No | No |
+
+Sesión HTTP-only, SameSite Strict, caducidad de 8 horas, CSRF para escrituras, respuestas API no almacenables en caché, CSP, protección contra encuadre y límites de archivo. El límite de login es de 10 intentos/5 minutos por IP y proceso. Los archivos se descargan como adjuntos y usan nombres internos aleatorios. Las entradas clínicas y eventos no tienen endpoints de edición o borrado.
+
+## Pruebas
+
+```sh
+.venv/bin/python -m pytest -q
+npm --prefix frontend run build
 ```
 
-### 3. Ejecución
-Para iniciar el servidor y abrir la aplicación automáticamente en tu navegador:
-```bash
-python3 run.py
-```
-*`run.py` detectará automáticamente el entorno virtual, seleccionará un puerto libre (por defecto `8000` o `8001`) y abrirá tu navegador automáticamente.*
+La suite usa su propia base temporal y cubre flujo clínico y persistencia, estados y versiones, permisos y CSRF, validación FDI, conflictos de agenda, PDF/documentos, cierre económico, idempotencia y sobrepagos concurrentes. La integración añade cobertura para gabinetes, aceptación en bloque, caja diaria y respaldo de datos y documentos. No toca la base demo.
 
-**En macOS**: También puedes hacer simplemente doble clic sobre el archivo **`iniciar_whitetooth.command`** desde Finder.
+## PostgreSQL y evolución
 
-### 4. Conexión desde el Gabinete (Torre 2 o Tablets)
-En la Torre 2 o tablets conectadas al WiFi de la clínica, abre el navegador e introduce la IP de la Torre 1:
-```text
-http://192.168.1.XX:8000
-```
-*(La IP exacta de tu red se muestra en la pantalla de la consola al arrancar el programa).*
+Configurar `DATABASE_URL=postgresql+psycopg://usuario:clave@host/dentalis` y opcionalmente `DENTALIS_STORAGE` antes de arrancar. Los modelos utilizan tipos portables de SQLAlchemy; se incluye el controlador psycopg. PostgreSQL **no se ha probado en este entorno**. No se copian automáticamente los datos de SQLite. Actualmente el esquema inicial se crea con `create_all`; incorporar migraciones versionadas antes de modificar una base existente o desplegar producción.
 
----
+## Límites del MVP y siguientes entregas
 
-## ⚖️ Cumplimiento Normativo y Legal en España
+- **Facturación:** documentos internos de demostración, sin emisión de facturas fiscales ni integración tributaria. Faltan series fiscales, impuestos y rectificaciones.
+- **Seguridad de producción:** faltan recuperación/cambio de contraseña, MFA, administración de bajas, rate limiting compartido, cifrado de datos y copias, procedimientos de recuperación, auditoría protegida frente a administradores de la BD, antivirus y revisión independiente.
+- **Clínica:** falta validación profesional del odontograma, correcciones con contrapartida, estados diagnósticos y evolución avanzada, consentimientos firmados y permisos por centro.
+- **Agenda:** permite crear y cambiar estado; reprogramar requiere cancelar y crear una nueva cita.
+- **Interfaz:** formularios funcionales; quedan pruebas exhaustivas de accesibilidad, foco de modales y escenarios de red inestable.
+- Sin multiclínica, migración desde MNprogram ni despliegue externo. No se ha enviado nada a Jesús ni a GitHub.
 
-1. **Protección de Datos de Salud (RGPD / LOPD-GDD)**:
-   - Registro con timestamp de la firma del consentimiento informado para el tratamiento de datos médicos de categoría especial.
-2. **Ley Antifraude (Ley 11/2021 y RD 1007/2023 - Veri\*factu)**:
-   - Registros de facturación inalterables con encadenamiento de registros.
-   - Prohibición de eliminación o modificación de facturas; correcciones obligatorias mediante Facturas de Abono (Rectificativas).
-3. **Exención de IVA en Tratamientos Sanitarios**:
-   - Facturas expedidas al **0% de IVA** en estricto cumplimiento del **Artículo 20.Uno.3º de la Ley 37/1992**.
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia **MIT**. Consulta el archivo `LICENSE` para más información.
+No usar datos sanitarios reales ni exponer a internet esta demo. El salto a producto comercial requiere completar estos puntos, validar los flujos con la clínica y revisar requisitos legales aplicables. Para HTTPS futuro activar `DENTALIS_SECURE_COOKIE=1`; en localhost HTTP debe permanecer desactivado.
